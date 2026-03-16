@@ -1,0 +1,32 @@
+[project]
+name = "netbox-device-type-importer"
+version = "1.4.4"
+description = "A Netbox plugin for importing device types from the device type library."
+authors = [
+    {name="Andy Wilson", email="andy@shady.org"},
+]
+license-files = ["LICENSE"]
+readme = "README.md"
+keywords = ["netbox", "netbox-plugin", "devicetype", "importer", "netbox-device-type-importer"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable"
+]
+dependencies = [
+]
+requires-python = ">=3.12"
+
+[project.urls]
+Homepage = "https://github.com/andy-shady-org/netbox-device-type-importer"
+Documentation = "https://github.com/andy-shady-org/netbox-device-type-importer/blob/main/README.md"
+Repository = "https://github.com/andy-shady-org/netbox-device-type-importer"
+Issues = "https://github.com/andy-shady-org/netbox-device-type-importer/issues"
+
+[build-system]
+requires = ['setuptools >= 64']
+build-backend = 'setuptools.build_meta'
+
+[tool.setuptools.packages.find]
+exclude = ["examples*", "media*", "*.tests*"]
+
+[tool.setuptools.package-data]
+"netbox_device_type_importer" = ["templates/**/*.html"]
