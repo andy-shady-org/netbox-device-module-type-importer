@@ -35,7 +35,7 @@ jobs:
           - name: Checkout code
             uses: actions/checkout@main
             with:
-                path: netbox-device-type-importer
+                path: netbox-device-module-type-importer
 
           - name: Set up Python ${{ matrix.python-version }}
             uses: actions/setup-python@main
@@ -50,7 +50,7 @@ jobs:
                 ref: main
 
           - name: Install NetBox Device Type Importer
-            working-directory: netbox-device-type-importer
+            working-directory: netbox-device-module-type-importer
             run: |
                 # include tests directory for test
                 sed -i 's/exclude/#exclude/g' pyproject.toml
@@ -59,7 +59,7 @@ jobs:
           - name: Set up configuration
             working-directory: netbox
             run: |
-                ln -s $(pwd)/../netbox-device-type-importer/media/configuration.testing.py netbox/netbox/configuration.py
+                ln -s $(pwd)/../netbox-device-module-type-importer/media/configuration.testing.py netbox/netbox/configuration.py
 
                 python -m pip install --upgrade pip
                 python -m pip install tblib
@@ -68,4 +68,4 @@ jobs:
 #          - name: Run tests
 #            working-directory: netbox
 #            run: |
-#                python netbox/manage.py test netbox_device_type_importer.tests --parallel -v2
+#                python netbox/manage.py test netbox_device_module_type_importer.tests --parallel -v2

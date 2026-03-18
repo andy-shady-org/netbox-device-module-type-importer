@@ -15,7 +15,7 @@ DATABASE = {
 }
 
 PLUGINS = [
-    "netbox_device_type_importer",
+    "netbox_device_module_type_importer",
 ]
 
 REDIS = {

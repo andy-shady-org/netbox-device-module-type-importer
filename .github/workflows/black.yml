@@ -16,4 +16,4 @@ jobs:
             uses: psf/black@stable
             with:
                 options: "--check"
-                src: "netbox_device_type_importer"
+                src: "netbox_device_module_type_importer"
