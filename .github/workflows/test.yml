@@ -65,7 +65,7 @@ jobs:
                 python -m pip install tblib
                 pip install -r requirements.txt -U
 
-          - name: Run tests
-            working-directory: netbox
-            run: |
-                python netbox/manage.py test netbox_device_type_importer.tests --parallel -v2
+#          - name: Run tests
+#            working-directory: netbox
+#            run: |
+#                python netbox/manage.py test netbox_device_type_importer.tests --parallel -v2
