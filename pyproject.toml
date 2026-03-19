@@ -1,6 +1,6 @@
 [project]
 name = "netbox-device-module-type-importer"
-version = "0.0.1"
+version = "0.0.2"
 description = "A Netbox plugin for importing device and module types from the device type library."
 authors = [
     {name="Andy Wilson", email="andy@shady.org"},
