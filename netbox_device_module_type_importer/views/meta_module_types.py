@@ -1,15 +1,12 @@
 from collections import OrderedDict
 from urllib.parse import urlencode
-import time
 
 from django.conf import settings
 from django.db import transaction
 from django.contrib import messages
-from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, reverse
 from django.utils.text import slugify
 from django.views.generic import View
-from django.forms import DecimalField, HiddenInput
 
 from netbox.views import generic
 from utilities.views import register_model_view
@@ -46,7 +43,7 @@ class MetaModuleTypeListView(generic.ObjectListView):
 
 
 @register_model_view(MetaModuleType, "delete")
-class metamoduletypeDeleteView(generic.ObjectDeleteView):
+class MetaModuleTypeDeleteView(generic.ObjectDeleteView):
     queryset = MetaModuleType.objects.all()
 
 
@@ -58,18 +55,13 @@ class MetaModuleTypeBulkDeleteView(generic.BulkDeleteView):
 
 @register_model_view(MetaModuleType, "load", detail=False)
 @register_model_view(MetaModuleType, "edit")
-class MetaModuleTypeEditView(ContentTypePermissionRequiredMixin, View):
-    def get_required_permission(self):
-        return "netbox_devicetype_importer.add_metamoduletype"
+class MetaModuleTypeEditView(generic.ObjectEditView):
+    queryset = MetaModuleType.objects.all()
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         loaded = 0
         created = 0
         updated = 0
-        if not request.user.has_perm(
-            "netbox_device_module_type_importer.add_metamoduletype"
-        ):
-            return HttpResponseForbidden()
         plugin_settings = settings.PLUGINS_CONFIG.get(
             "netbox_device_module_type_importer", {}
         )
