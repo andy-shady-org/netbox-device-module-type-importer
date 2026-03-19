@@ -22,7 +22,7 @@ if not token:
     sys.exit(1)
 
 
-def benchmark_sync(batch_size=50, verbose=False):
+def benchmark_sync(batch_size=50):
     """Benchmark synchronous version."""
     print("\n" + "=" * 60)
     print("SYNCHRONOUS VERSION")
@@ -31,7 +31,7 @@ def benchmark_sync(batch_size=50, verbose=False):
     api = GitHubGQLAPI(token=token, owner="netbox-community", repo="devicetype-library")
 
     start_time = time.time()
-    tree = api.get_tree(batch_size=batch_size, delay_between_batches=0, verbose=verbose)
+    tree = api.get_tree(batch_size=batch_size, delay_between_batches=0)
     elapsed = time.time() - start_time
 
     total_vendors = len(tree)
@@ -53,7 +53,7 @@ def benchmark_sync(batch_size=50, verbose=False):
 
 
 def benchmark_async(
-    batch_size=50, max_concurrent_requests=10, max_concurrent_vendors=5, verbose=False
+    batch_size=50, max_concurrent_requests=10, max_concurrent_vendors=5
 ):
     """Benchmark async version."""
     print("\n" + "=" * 60)
@@ -72,7 +72,6 @@ def benchmark_async(
         batch_size=batch_size,
         max_concurrent_requests=max_concurrent_requests,
         max_concurrent_vendors=max_concurrent_vendors,
-        verbose=verbose,
     )
     elapsed = time.time() - start_time
 
@@ -112,7 +111,7 @@ def main():
     print("\n" + "#" * 60)
     print("# Test 1: Synchronous (Current Implementation)")
     print("#" * 60)
-    sync_result = benchmark_sync(batch_size=50, verbose=False)
+    sync_result = benchmark_sync(batch_size=50)
     results.append(sync_result)
 
     print("\nWaiting 5 seconds before next test...")
@@ -126,7 +125,6 @@ def main():
         batch_size=50,
         max_concurrent_requests=10,
         max_concurrent_vendors=5,
-        verbose=False,
     )
     results.append(async_conservative)
 
@@ -141,7 +139,6 @@ def main():
         batch_size=50,
         max_concurrent_requests=15,
         max_concurrent_vendors=10,
-        verbose=False,
     )
     results.append(async_moderate)
 
@@ -156,7 +153,6 @@ def main():
         batch_size=50,
         max_concurrent_requests=20,
         max_concurrent_vendors=20,
-        verbose=False,
     )
     results.append(async_aggressive)
 

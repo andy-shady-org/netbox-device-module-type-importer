@@ -22,10 +22,10 @@ if not token:
 
 # Test configurations
 test_configs = [
-    {"name": "Conservative", "batch_size": 25, "delay": 0.2, "verbose": True},
-    {"name": "Default (Recommended)", "batch_size": 50, "delay": 0.1, "verbose": True},
-    {"name": "Fast", "batch_size": 75, "delay": 0.05, "verbose": True},
-    {"name": "Ultra Fast", "batch_size": 100, "delay": 0, "verbose": False},
+    {"name": "Conservative", "batch_size": 25, "delay": 0.2},
+    {"name": "Default (Recommended)", "batch_size": 50, "delay": 0.1},
+    {"name": "Fast", "batch_size": 75, "delay": 0.05},
+    {"name": "Ultra Fast", "batch_size": 100, "delay": 0},
 ]
 
 
@@ -48,7 +48,6 @@ def benchmark_config(api, config, test_vendors=5):
     tree = api_test.get_tree(
         batch_size=config["batch_size"],
         delay_between_batches=config["delay"],
-        verbose=config["verbose"],
     )
 
     elapsed = time.time() - start_time
