@@ -1,8 +1,11 @@
 import asyncio
 import aiohttp
+import logging
 import time
 import requests
 from jinja2 import Template
+
+logger = logging.getLogger("netbox_device_module_type_importer")
 
 
 class GQLError(Exception):
@@ -168,7 +171,6 @@ class GitHubGQLAPIAsync:
         file_names,
         batch_size,
         oid_template,
-        verbose,
         semaphore,
     ):
         """Process all batches for a vendor in parallel."""
@@ -179,10 +181,9 @@ class GitHubGQLAPIAsync:
             """Fetch a single batch of files."""
             async with semaphore:  # Limit concurrent requests
                 batch_num = batch_idx + 1
-                if verbose:
-                    print(
-                        f"    Batch {batch_num}/{total_batches}: {len(batch_files)} files"
-                    )
+                logger.debug(
+                    f"Batch {batch_num}/{total_batches}: {len(batch_files)} files"
+                )
 
                 try:
                     oid_query = oid_template.render(
@@ -195,10 +196,7 @@ class GitHubGQLAPIAsync:
                     oid_data = await self.get_query_async(session, oid_query)
 
                     if not oid_data:
-                        if verbose:
-                            print(
-                                f"      Warning: No data returned for batch {batch_num}"
-                            )
+                        logger.debug(f"Warning: No data returned for batch {batch_num}")
                         return None
 
                     # Extract OIDs
@@ -213,8 +211,7 @@ class GitHubGQLAPIAsync:
                     return batch_result
 
                 except GQLError as e:
-                    if verbose:
-                        print(f"      Error fetching batch {batch_num}: {e}")
+                    logger.error(f"Error fetching batch {batch_num}: {e}")
                     return None
 
         # Create tasks for all batches
@@ -231,17 +228,16 @@ class GitHubGQLAPIAsync:
         failed_batches = []
         for idx, batch_result in enumerate(batch_results):
             if isinstance(batch_result, Exception):
-                if verbose:
-                    print(f"      Exception in batch {idx + 1}: {batch_result}")
+                logger.error(f"Exception in batch {idx + 1}: {batch_result}")
                 failed_batches.append(idx + 1)
             elif batch_result:
                 result.update(batch_result)
             else:
                 failed_batches.append(idx + 1)
 
-        if failed_batches and verbose:
-            print(
-                f"  Warning: Failed to fetch batches {failed_batches} for {vendor_name}"
+        if failed_batches:
+            logger.error(
+                f"Warning: Failed to fetch batches {failed_batches} for {vendor_name}"
             )
 
         return result
@@ -253,7 +249,6 @@ class GitHubGQLAPIAsync:
         sub_template,
         oid_template,
         batch_size,
-        verbose,
         semaphore,
     ):
         """Process a single vendor (get file names, then fetch OIDs in parallel batches)."""
@@ -265,8 +260,7 @@ class GitHubGQLAPIAsync:
             vendor_data = await self.get_query_async(session, sub_query)
 
             if not vendor_data:
-                if verbose:
-                    print(f"  Warning: No data returned for {vendor_name}")
+                logger.debug(f"  Warning: No data returned for {vendor_name}")
                 return vendor_name, {}
 
             # Extract file names
@@ -276,14 +270,12 @@ class GitHubGQLAPIAsync:
             ]
 
             if not file_names:
-                if verbose:
-                    print(f"  No files found in {vendor_name}")
+                logger.debug(f"No files found in {vendor_name}")
                 return vendor_name, {}
 
-            if verbose:
-                print(
-                    f"  Found {len(file_names)} files, fetching OIDs in parallel batches of {batch_size}..."
-                )
+            logger.debug(
+                f"Found {len(file_names)} files, fetching OIDs in parallel batches of {batch_size}..."
+            )
 
             # Fetch all batches in parallel
             result = await self.process_vendor_batches(
@@ -292,19 +284,16 @@ class GitHubGQLAPIAsync:
                 file_names,
                 batch_size,
                 oid_template,
-                verbose,
                 semaphore,
             )
 
             return vendor_name, result
 
         except GQLError as e:
-            if verbose:
-                print(f"  Error processing vendor {vendor_name}: {e}")
+            logger.error(f"Error processing vendor {vendor_name}: {e}")
             return vendor_name, {}
         except Exception as e:
-            if verbose:
-                print(f"  Unexpected error processing vendor {vendor_name}: {e}")
+            logger.error(f"Unexpected error processing vendor {vendor_name}: {e}")
             return vendor_name, {}
 
     async def get_tree_async(
@@ -312,7 +301,6 @@ class GitHubGQLAPIAsync:
         batch_size=50,
         max_concurrent_requests=10,
         max_concurrent_vendors=5,
-        verbose=True,
     ):
         """
         Async version of get_tree with parallel processing.
@@ -344,10 +332,9 @@ class GitHubGQLAPIAsync:
             vendor_list = [v for v in vendors if v["type"] == "tree"]
             total_vendors = len(vendor_list)
 
-            if verbose:
-                print(
-                    f"Processing {total_vendors} vendors in parallel (max {max_concurrent_vendors} at a time)..."
-                )
+            logging.debug(
+                f"Processing {total_vendors} vendors in parallel (max {max_concurrent_vendors} at a time)..."
+            )
 
             # Pre-compile templates
             sub_template = Template(self.sub_tree_query)
@@ -362,10 +349,9 @@ class GitHubGQLAPIAsync:
                 for vendor in vendor_batch:
                     vendor_name = vendor["name"]
                     vendor_count += 1
-                    if verbose:
-                        print(
-                            f"Processing vendor: {vendor_name} ({vendor_count}/{total_vendors})"
-                        )
+                    logger.debug(
+                        f"Processing vendor: {vendor_name} ({vendor_count}/{total_vendors})"
+                    )
 
                     task = self.process_vendor(
                         session,
@@ -373,7 +359,6 @@ class GitHubGQLAPIAsync:
                         sub_template,
                         oid_template,
                         batch_size,
-                        verbose,
                         semaphore,
                     )
                     tasks.append(task)
@@ -384,8 +369,7 @@ class GitHubGQLAPIAsync:
                 # Combine results
                 for vendor_result in vendor_results:
                     if isinstance(vendor_result, Exception):
-                        if verbose:
-                            print(f"  Exception processing vendor: {vendor_result}")
+                        logger.error(f"  Exception processing vendor: {vendor_result}")
                         continue
                     vendor_name, vendor_data = vendor_result
                     result[vendor_name] = vendor_data
@@ -397,7 +381,6 @@ class GitHubGQLAPIAsync:
         batch_size=50,
         max_concurrent_requests=10,
         max_concurrent_vendors=5,
-        verbose=True,
     ):
         """
         Synchronous wrapper for async get_tree.
@@ -416,7 +399,6 @@ class GitHubGQLAPIAsync:
                 batch_size=batch_size,
                 max_concurrent_requests=max_concurrent_requests,
                 max_concurrent_vendors=max_concurrent_vendors,
-                verbose=verbose,
             )
         )
 
