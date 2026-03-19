@@ -6,7 +6,6 @@ from django.db import transaction
 from django.contrib import messages
 from django.shortcuts import redirect, reverse
 from django.utils.text import slugify
-from django.views.generic import View
 
 from netbox.views import generic
 from utilities.views import register_model_view
@@ -15,7 +14,6 @@ from dcim import forms
 from utilities.forms import restrict_form_fields
 from utilities.forms.bulk_import import BulkImportForm
 from utilities.exceptions import AbortTransaction, PermissionsViolation
-from utilities.views import ContentTypePermissionRequiredMixin
 from netbox.object_actions import BulkDelete
 
 from netbox_device_module_type_importer.models import MetaDeviceType
@@ -29,6 +27,8 @@ __all__ = (
     "MetaDeviceTypeEditView",
     "MetaDeviceTypeImportView",
 )
+
+plugin_settings = settings.PLUGINS_CONFIG.get("netbox_device_module_type_importer", {})
 
 
 @register_model_view(MetaDeviceType, "list", path="", detail=False)
@@ -62,9 +62,6 @@ class MetaDeviceTypeEditView(generic.ObjectEditView):
         loaded = 0
         created = 0
         updated = 0
-        plugin_settings = settings.PLUGINS_CONFIG.get(
-            "netbox_device_module_type_importer", {}
-        )
         token = plugin_settings.get("github_token")
         repo = plugin_settings.get("repo")
         owner = plugin_settings.get("repo_owner")
@@ -130,7 +127,7 @@ class MetaDeviceTypeEditView(generic.ObjectEditView):
 
 
 @register_model_view(MetaDeviceType, "bulk_import", detail=False)
-class MetaDeviceTypeImportView(ContentTypePermissionRequiredMixin, View):
+class MetaDeviceTypeImportView(generic.BulkImportView):
     queryset = MetaDeviceType.objects.all()
     filterset = MetaDeviceTypeFilterSet
     filterset_form = MetaDeviceTypeFilterForm
@@ -145,11 +142,10 @@ class MetaDeviceTypeImportView(ContentTypePermissionRequiredMixin, View):
             ("rear-ports", forms.RearPortTemplateImportForm),
             ("front-ports", forms.FrontPortTemplateImportForm),
             ("device-bays", forms.DeviceBayTemplateImportForm),
+            ("module-bays", forms.ModuleBayTemplateImportForm),
+            ("inventory-items", forms.InventoryItemTemplateImportForm),
         )
     )
-
-    def get_required_permission(self):
-        return "netbox_device_module_type_importer.add_metadevicetype"
 
     def post(self, request):
         vendor_count = 0
@@ -168,25 +164,10 @@ class MetaDeviceTypeImportView(ContentTypePermissionRequiredMixin, View):
         else:
             pk_list = [int(pk) for pk in request.POST.getlist("pk")]
 
-        plugin_settings = settings.PLUGINS_CONFIG.get(
-            "netbox_device_module_type_importer", {}
-        )
         token = plugin_settings.get("github_token")
         repo = plugin_settings.get("repo")
         owner = plugin_settings.get("repo_owner")
         url = plugin_settings.get("github_url")
-        version_minor = settings.VERSION.split(".")[1]
-
-        # for 3.2 new device type components
-        if int(version_minor) >= 2:
-            self.related_object_forms.popitem()
-            self.related_object_forms.update(
-                {
-                    "module-bays": forms.ModuleBayTemplateImportForm,
-                    "device-bays": forms.DeviceBayTemplateImportForm,
-                    "inventory-items": forms.InventoryItemTemplateImportForm,
-                }
-            )
 
         if token:
             gh_api = GitHubGQLAPIAsync(url=url, token=token, owner=owner, repo=repo)
@@ -267,11 +248,8 @@ class MetaDeviceTypeImportView(ContentTypePermissionRequiredMixin, View):
                                 for i, rel_obj_data in enumerate(
                                     data.get(field_name, list())
                                 ):
-                                    if int(version_minor) >= 2:
-                                        rel_obj_data.update({"device_type": obj})
-                                        f = related_object_form(rel_obj_data)
-                                    else:
-                                        f = related_object_form(obj, rel_obj_data)
+                                    rel_obj_data.update({"device_type": obj})
+                                    f = related_object_form(rel_obj_data)
                                     for subfield_name, field in f.fields.items():
                                         if (
                                             subfield_name not in rel_obj_data

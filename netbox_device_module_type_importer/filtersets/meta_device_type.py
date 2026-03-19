@@ -1,18 +1,15 @@
 import django_filters
 
 from django.db.models import Q
-
+from utilities.filtersets import register_filterset
+from netbox.filtersets import NetBoxModelFilterSet
 from netbox_device_module_type_importer.models import MetaDeviceType
 
 __all__ = ("MetaDeviceTypeFilterSet",)
 
 
-class MetaDeviceTypeFilterSet(django_filters.FilterSet):
-    q = django_filters.CharFilter(
-        method="search",
-        label="Search",
-    )
-
+@register_filterset
+class MetaDeviceTypeFilterSet(NetBoxModelFilterSet):
     name = django_filters.CharFilter(
         method="by_model",
         label="Model",
@@ -47,6 +44,5 @@ class MetaDeviceTypeFilterSet(django_filters.FilterSet):
     def search(self, queryset, name, value):
         if not value.strip():
             return queryset
-
         qs_filter = Q(name__icontains=value) | Q(vendor__icontains=value)
         return queryset.filter(qs_filter)

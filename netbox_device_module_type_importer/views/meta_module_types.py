@@ -6,7 +6,6 @@ from django.db import transaction
 from django.contrib import messages
 from django.shortcuts import redirect, reverse
 from django.utils.text import slugify
-from django.views.generic import View
 
 from netbox.views import generic
 from utilities.views import register_model_view
@@ -15,7 +14,6 @@ from dcim import forms
 from utilities.forms import restrict_form_fields
 from utilities.forms.bulk_import import BulkImportForm
 from utilities.exceptions import AbortTransaction, PermissionsViolation
-from utilities.views import ContentTypePermissionRequiredMixin
 from netbox.object_actions import BulkDelete
 
 from netbox_device_module_type_importer.models import MetaModuleType
@@ -29,6 +27,8 @@ __all__ = (
     "MetaModuleTypeEditView",
     "MetaModuleTypeImportView",
 )
+
+plugin_settings = settings.PLUGINS_CONFIG.get("netbox_device_module_type_importer", {})
 
 
 @register_model_view(MetaModuleType, "list", path="", detail=False)
@@ -62,9 +62,6 @@ class MetaModuleTypeEditView(generic.ObjectEditView):
         loaded = 0
         created = 0
         updated = 0
-        plugin_settings = settings.PLUGINS_CONFIG.get(
-            "netbox_device_module_type_importer", {}
-        )
         token = plugin_settings.get("github_token")
         repo = plugin_settings.get("repo")
         owner = plugin_settings.get("repo_owner")
@@ -132,7 +129,7 @@ class MetaModuleTypeEditView(generic.ObjectEditView):
 
 
 @register_model_view(MetaModuleType, "bulk_import", detail=False)
-class MetaModuleTypeImportView(ContentTypePermissionRequiredMixin, View):
+class MetaModuleTypeImportView(generic.BulkImportView):
     queryset = MetaModuleType.objects.all()
     filterset = MetaModuleTypeFilterSet
     filterset_form = MetaModuleTypeFilterForm
@@ -147,11 +144,10 @@ class MetaModuleTypeImportView(ContentTypePermissionRequiredMixin, View):
             ("rear-ports", forms.RearPortTemplateImportForm),
             ("front-ports", forms.FrontPortTemplateImportForm),
             ("device-bays", forms.DeviceBayTemplateImportForm),
+            ("module-bays", forms.ModuleBayTemplateImportForm),
+            ("inventory-items", forms.InventoryItemTemplateImportForm),
         )
     )
-
-    def get_required_permission(self):
-        return "netbox_device_module_type_importer.add_metamoduletype"
 
     def post(self, request):
         vendor_count = 0
@@ -170,25 +166,10 @@ class MetaModuleTypeImportView(ContentTypePermissionRequiredMixin, View):
         else:
             pk_list = [int(pk) for pk in request.POST.getlist("pk")]
 
-        plugin_settings = settings.PLUGINS_CONFIG.get(
-            "netbox_device_module_type_importer", {}
-        )
         token = plugin_settings.get("github_token")
         repo = plugin_settings.get("repo")
         owner = plugin_settings.get("repo_owner")
         url = plugin_settings.get("github_url")
-        version_minor = settings.VERSION.split(".")[1]
-
-        # for 3.2 new device type components
-        if int(version_minor) >= 2:
-            self.related_object_forms.popitem()
-            self.related_object_forms.update(
-                {
-                    "module-bays": forms.ModuleBayTemplateImportForm,
-                    "device-bays": forms.DeviceBayTemplateImportForm,
-                    "inventory-items": forms.InventoryItemTemplateImportForm,
-                }
-            )
 
         if token:
             gh_api = GitHubGQLAPIAsync(
@@ -261,11 +242,8 @@ class MetaModuleTypeImportView(ContentTypePermissionRequiredMixin, View):
                                 for i, rel_obj_data in enumerate(
                                     data.get(field_name, list())
                                 ):
-                                    if int(version_minor) >= 2:
-                                        rel_obj_data.update({"module_type": obj})
-                                        f = related_object_form(rel_obj_data)
-                                    else:
-                                        f = related_object_form(obj, rel_obj_data)
+                                    rel_obj_data.update({"module_type": obj})
+                                    f = related_object_form(rel_obj_data)
                                     for subfield_name, field in f.fields.items():
                                         if (
                                             subfield_name not in rel_obj_data
