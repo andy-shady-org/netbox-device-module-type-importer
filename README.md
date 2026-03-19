@@ -129,5 +129,5 @@ Contributions are always welcome! Please see the [Contribution Guidelines](CONTR
 
 ## Credits
 
-- Thanks to Nikolay Yuzefovich for providing the original version of [DeviceType Importer](https://github.com/nikolay-yuzefovich/netbox-devicetype-importer).
+- Thanks to Nikolay Yuzefovich for providing the original version of [DeviceType Importer](https://github.com/k01ek/netbox-devicetype-importer).
 
